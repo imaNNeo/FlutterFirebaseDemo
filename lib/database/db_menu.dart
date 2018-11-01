@@ -30,6 +30,9 @@ class DbMenuPage extends StatelessWidget {
                     onLongPress: () {
                       tryToRemove(context, documentSnapshot);
                     },
+                    onTap: () {
+                      editRecord(context, documentSnapshot);
+                    },
                   );
                 },
                 itemCount: documents.length,
@@ -38,19 +41,20 @@ class DbMenuPage extends StatelessWidget {
           }),
       floatingActionButton: new FloatingActionButton(
         onPressed: () {
-          createRecord(context);
+          createOrEditRecord(context);
         },
         child: Icon(Icons.add),
       ),
     );
   }
 
-  void createRecord(BuildContext context) {
+  void createOrEditRecord(BuildContext context) {
     showDialog(
         context: context,
         builder: (context) {
-          final titleController = TextEditingController();
-          final subtitleController = TextEditingController();
+          TextEditingController titleController = TextEditingController();
+          TextEditingController subtitleController = TextEditingController();
+
           return new Dialog(
             child: Padding(
               padding: const EdgeInsets.all(8.0),
@@ -89,8 +93,60 @@ class DbMenuPage extends StatelessWidget {
             ),
           );
         }).then((result) {
-      Firestore.instance.collection("test").document().setData(
-          {'title': result['title'], 'sub_title': result['sub_title']});
+      final data = {'title': result['title'], 'sub_title': result['sub_title']};
+      Firestore.instance.collection("test").document().setData(data);
+    });
+  }
+
+  void editRecord(BuildContext context, DocumentSnapshot document) {
+    showDialog(
+        context: context,
+        builder: (context) {
+          TextEditingController titleController =
+              TextEditingController(text: document.data['title']);
+          TextEditingController subtitleController =
+              TextEditingController(text: document.data['sub_title']);
+
+          return new Dialog(
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  TextField(
+                    controller: titleController,
+                    decoration: InputDecoration(hintText: "Enter the title"),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: TextField(
+                      controller: subtitleController,
+                      decoration:
+                          InputDecoration(hintText: "Enter the sub title"),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 16.0),
+                    child: FlatButton(
+                        onPressed: () {
+                          Navigator.of(context).pop({
+                            'title': titleController.text,
+                            'sub_title': subtitleController.text
+                          });
+                        },
+                        child: Text(
+                          "Save",
+                          style:
+                              TextStyle(color: Theme.of(context).primaryColor),
+                        )),
+                  )
+                ],
+              ),
+            ),
+          );
+        }).then((result) {
+      final data = {'title': result['title'], 'sub_title': result['sub_title']};
+      document.reference.updateData(data);
     });
   }
 
@@ -125,5 +181,4 @@ class DbMenuPage extends StatelessWidget {
           );
         });
   }
-
 }
